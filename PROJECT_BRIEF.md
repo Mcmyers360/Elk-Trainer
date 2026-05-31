@@ -288,3 +288,43 @@ A working React/JSX version of the full app exists from a prior Claude conversat
 - All five tabs functional with correct data persistence
 - GitHub write conflicts handled gracefully (SHA management)
 - Token never appears in committed code
+
+-----
+
+## Expert Review Notes
+
+*Three-persona review conducted prior to first build. These are known issues and design decisions to address as they become relevant — not blockers for the initial draft.*
+
+### Storage & API (Jordan Kell — PWA Engineer)
+
+| # | Issue | Status |
+|---|-------|--------|
+| S1 | `btoa(JSON.stringify())` corrupts non-ASCII characters — use `btoa(unescape(encodeURIComponent(...)))` on write, inverse on read | **Fixed in v1** |
+| S2 | "gist scope" is incorrect — Contents API requires `repo` scope (or fine-grained `contents: write`) | **Fixed in v1 (docs updated)** |
+| S3 | Single `data.json` will corrupt on concurrent writes from two devices — by design for single-user, single-device; document the limitation | Accepted, documented |
+| S4 | Offline write queue needs explicit flush strategy: use localStorage as queue, flush on `online` event, fetch fresh SHA before each queued write | **Fixed in v1** |
+| S5 | Service worker must never cache `data.json` or any `api.github.com` request | **Fixed in v1** |
+| S6 | Public repo = public data. Add note in README to consider a private repo | Address in README |
+
+### Design & UX (Maris Okafor — UX/UI Lead)
+
+| # | Issue | Status |
+|---|-------|--------|
+| D1 | `Text muted` original (#5a7a5a) fails WCAG AA contrast — bumped to #7a9a7a | **Fixed in v1** |
+| D2 | Georgia everywhere is fatiguing in dense lists — consider system-ui for body list text | Deferred |
+| D3 | Day row expand tap target must be ≥ 44pt — full row is tappable | **Fixed in v1** |
+| D4 | Shooting tab overloaded — split into Log / History sub-views | **Fixed in v1** |
+| D5 | Condition chip selected state not specified | **Defined in v1** |
+| D6 | Delete must require confirmation — no silent delete | **Fixed in v1 (modal)** |
+
+### Architecture & Product (Dmitri Voss — Product Quality)
+
+| # | Issue | Status |
+|---|-------|--------|
+| A1 | "Streak" definition is ambiguous — defined as: consecutive non-rest days completed, counting back from yesterday; today counts only after being marked done | **Fixed in v1** |
+| A2 | 60-session phase threshold ≠ 3-month calendar boundaries — accepted as-is; session-count advancement is intentional gamification | Accepted |
+| A3 | `sessionNotes` multi-note schema vs. single-note UI — simplified to single note per day in UI; schema remains an array for future compatibility | Deferred |
+| A4 | No `schemaVersion` field in `data.json` | **Fixed in v1 (`schemaVersion: 1`)** |
+| A5 | `workoutLog` binary only (no partial) — accepted as-is for simplicity | Accepted |
+| A6 | First-run flow ordering: PIN before working app is confusing — inverted to GitHub setup first, PIN second | **Fixed in v1** |
+| A7 | No spec for error states (expired token, write failure, malformed JSON) — show toast on write failure; token re-entry via setup re-flow | Partial in v1, improve over time |

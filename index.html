@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Elk Trainer">
+<meta name="theme-color" content="#0f1a0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Elk Hunt Trainer 2027</title>
+<style>
+:root {
+  --bg:        #0f1a0f;
+  --surf:      #131f13;
+  --surf2:     #1a2e1a;
+  --bdr:       #1e2e1e;
+  --bdr2:      #2a3a2a;
+  --bdr-act:   #4a6741;
+  --gold:      #8B6914;
+  --green:     #6B9E5A;
+  --tp:        #f0e6c8;
+  --ts:        #c8b88a;
+  --tm:        #7a9a7a;
+  --ok:        #6adf6a;
+  --err:       #df6a6a;
+  --safe-t: env(safe-area-inset-top,    0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{
+  background:var(--bg);color:var(--tp);
+  font-family:Georgia,'Times New Roman',serif;
+  height:100%;overscroll-behavior:none;
+}
+input,select,textarea,button{font-family:inherit;color:inherit}
+
+/* ── Screens ─────────────────────────────────────── */
+.scr{display:none;min-height:100dvh;min-height:100vh}
+.scr.on{display:flex;flex-direction:column}
+
+/* ── Loading ─────────────────────────────────────── */
+#scr-load{align-items:center;justify-content:center;gap:1rem}
+.spin{width:32px;height:32px;border:3px solid var(--bdr2);border-top-color:var(--green);
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── PIN ─────────────────────────────────────────── */
+#scr-pin{align-items:center;justify-content:center;padding:2rem}
+.pin-dots{display:flex;gap:1.1rem;margin:1.5rem 0}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--bdr-act);transition:background .15s}
+.pin-dot.on{background:var(--green);border-color:var(--green)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;max-width:280px;width:100%}
+.pk{background:var(--surf2);border:1px solid var(--bdr2);border-radius:10px;font-size:1.4rem;
+  padding:.9rem;cursor:pointer;text-align:center;transition:background .1s;min-height:58px;
+  display:flex;align-items:center;justify-content:center}
+.pk:active{background:var(--bdr-act)}
+.pk.sm{font-size:.7rem;color:var(--tm);letter-spacing:.06em;text-transform:uppercase}
+
+/* ── Setup ───────────────────────────────────────── */
+#scr-setup{padding:calc(var(--safe-t) + 2rem) 1.5rem calc(var(--safe-b) + 2rem);overflow-y:auto}
+.logo h1{font-size:1.65rem;letter-spacing:.04em;color:var(--tp);text-align:center}
+.logo p{font-size:.78rem;color:var(--tm);text-align:center;margin-top:.3rem}
+.setup-lede{font-size:.65rem;color:var(--tm);text-transform:uppercase;letter-spacing:.12em;
+  text-align:center;margin:1.75rem 0 1.25rem}
+
+/* ── App shell ───────────────────────────────────── */
+#scr-app{padding-top:var(--safe-t)}
+.stats-bar{
+  background:var(--surf);border-bottom:1px solid var(--bdr2);
+  display:grid;grid-template-columns:repeat(4,1fr);flex-shrink:0;position:sticky;top:0;z-index:50;
+}
+.si{text-align:center;padding:.45rem .2rem}
+.sv{font-size:1.15rem;color:var(--tp);display:block;line-height:1.2}
+.sl{font-size:.52rem;color:var(--tm);text-transform:uppercase;letter-spacing:.08em;display:block}
+.tab-pane{
+  display:none;padding:1rem;
+  padding-bottom:calc(var(--safe-b) + 5rem);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  flex:1;
+}
+.tab-pane.on{display:block}
+.tab-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surf);border-top:1px solid var(--bdr2);
+  display:flex;padding-bottom:var(--safe-b);z-index:100;
+}
+.tb{
+  flex:1;background:none;border:none;color:var(--tm);padding:.55rem 0;
+  font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.2rem;
+  transition:color .15s;
+}
+.tb svg{width:22px;height:22px}
+.tb.on{color:var(--green)}
+
+/* ── Sync indicator ──────────────────────────────── */
+#sync{
+  position:fixed;top:calc(var(--safe-t) + .35rem);right:.75rem;
+  font-size:.58rem;color:var(--tm);text-transform:uppercase;letter-spacing:.07em;z-index:200;
+  pointer-events:none;transition:color .2s;
+}
+#sync.saving{color:var(--gold)}
+#sync.saved{color:var(--ok)}
+#sync.fail{color:var(--err)}
+
+/* ── Typography helpers ──────────────────────────── */
+.sec{font-size:.62rem;color:var(--tm);text-transform:uppercase;letter-spacing:.12em;
+  margin-bottom:.7rem;padding-bottom:.35rem;border-bottom:1px solid var(--bdr)}
+.sec-gap{margin-top:1.5rem}
+
+/* ── Cards ───────────────────────────────────────── */
+.card{background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;
+  padding:1rem;margin-bottom:.75rem}
+
+/* ── Forms ───────────────────────────────────────── */
+.fg{margin-bottom:.75rem}
+.fl{display:block;font-size:.6rem;color:var(--tm);text-transform:uppercase;
+  letter-spacing:.1em;margin-bottom:.35rem}
+.fi,.fs,.ft{
+  width:100%;background:var(--surf2);border:1px solid var(--bdr2);border-radius:7px;
+  color:var(--tp);padding:.6rem .75rem;font-size:.9rem;outline:none;transition:border .15s;
+}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--bdr-act)}
+.fs option{background:var(--surf2)}
+.ft{resize:vertical;min-height:68px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+
+/* ── Buttons ─────────────────────────────────────── */
+.btn{
+  background:var(--bdr-act);border:none;border-radius:9px;color:var(--tp);
+  padding:.75rem 1.5rem;cursor:pointer;width:100%;font-size:.9rem;
+  transition:background .15s;
+}
+.btn:active,.btn:hover{background:var(--green)}
+.btn-link{background:none;border:none;color:var(--tm);font-size:.75rem;
+  cursor:pointer;padding:.4rem;display:block;text-align:center;width:100%}
+.btn-sm{
+  background:var(--surf2);border:1px solid var(--bdr2);border-radius:7px;
+  color:var(--ts);padding:.4rem .9rem;cursor:pointer;font-size:.75rem;
+}
+
+/* ── Sub-nav (tabs within tabs) ──────────────────── */
+.subnav{
+  display:flex;background:var(--surf);border:1px solid var(--bdr2);
+  border-radius:9px;overflow:hidden;margin-bottom:1rem;
+}
+.snb{
+  flex:1;background:none;border:none;color:var(--tm);font-size:.68rem;
+  text-transform:uppercase;letter-spacing:.1em;padding:.6rem;cursor:pointer;
+  transition:all .15s;
+}
+.snb.on{background:var(--surf2);color:var(--green)}
+
+/* ── Week tab ────────────────────────────────────── */
+.wk-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.wk-title{font-size:.88rem;color:var(--tp)}
+.day-row{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:10px;
+  margin-bottom:.5rem;overflow:hidden;transition:border-color .15s;
+}
+.day-row.done{border-color:var(--bdr-act)}
+.day-main{display:flex;align-items:center;padding:.75rem 1rem;gap:.75rem;cursor:pointer}
+.day-row.rest .day-main{cursor:default}
+.day-check{
+  width:30px;height:30px;border-radius:50%;border:2px solid var(--bdr-act);
+  background:none;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .15s;
+}
+.day-row.done .day-check{background:var(--green);border-color:var(--green)}
+.day-row.rest .day-check{border-color:var(--bdr)}
+.day-info{flex:1;min-width:0}
+.day-name{font-size:.85rem;color:var(--tp);font-weight:bold}
+.day-wkt{font-size:.72rem;color:var(--ts)}
+.day-inds{display:flex;gap:.3rem;flex-shrink:0}
+.ind{
+  font-size:.58rem;padding:.15rem .4rem;border-radius:10px;
+  border:1px solid var(--bdr2);color:var(--tm);
+}
+.ind.w{border-color:var(--gold);color:var(--gold)}
+.ind.s{border-color:var(--green);color:var(--green)}
+.day-exp{
+  background:none;border:none;color:var(--tm);font-size:.62rem;
+  padding:0 1rem .55rem;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;
+}
+.day-notes-panel{padding:0 1rem .8rem;display:none}
+.day-notes-panel.on{display:block}
+.ni{
+  width:100%;background:var(--surf2);border:1px solid var(--bdr2);border-radius:7px;
+  color:var(--tp);padding:.6rem;font-size:.85rem;resize:none;min-height:58px;outline:none;
+}
+.ni:focus{border-color:var(--bdr-act)}
+.note-save{
+  margin-top:.4rem;background:var(--bdr-act);border:none;border-radius:7px;
+  color:var(--tp);padding:.4rem 1rem;cursor:pointer;font-size:.75rem;
+}
+
+/* ── Stats summary row ───────────────────────────── */
+.srow{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:1rem}
+.sbox{background:var(--surf);border:1px solid var(--bdr2);border-radius:9px;
+  padding:.7rem;text-align:center}
+.sbv{font-size:1.25rem;color:var(--tp);display:block}
+.sbl{font-size:.55rem;color:var(--tm);text-transform:uppercase;letter-spacing:.08em}
+
+/* ── Charts ──────────────────────────────────────── */
+.chart-wrap{
+  background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;
+  padding:1rem;margin-bottom:1rem;overflow-x:auto;
+}
+.chart-wrap svg{display:block;overflow:visible}
+
+/* ── Chips ───────────────────────────────────────── */
+.chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.chip{
+  background:var(--surf2);border:1px solid var(--bdr2);border-radius:20px;
+  color:var(--ts);padding:.3rem .75rem;cursor:pointer;font-size:.75rem;
+  transition:all .15s;
+}
+.chip.on{background:rgba(74,103,65,.2);border-color:var(--bdr-act);color:var(--green)}
+
+/* ── Toggle ──────────────────────────────────────── */
+.tgl-row{display:flex;align-items:center;justify-content:space-between}
+.tgl{position:relative;width:44px;height:26px;flex-shrink:0}
+.tgl input{opacity:0;width:0;height:0}
+.tgl-sl{
+  position:absolute;inset:0;background:var(--bdr2);border-radius:26px;
+  cursor:pointer;transition:background .2s;
+}
+.tgl-sl::before{
+  content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;
+  background:white;border-radius:50%;transition:transform .2s;
+}
+.tgl input:checked+.tgl-sl{background:var(--green)}
+.tgl input:checked+.tgl-sl::before{transform:translateX(18px)}
+
+/* ── History items ───────────────────────────────── */
+.hi{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:9px;
+  padding:.75rem 1rem;margin-bottom:.5rem;
+  display:flex;align-items:flex-start;gap:.75rem;
+}
+.hi-main{flex:1;min-width:0}
+.hi-title{font-size:.88rem;color:var(--tp);margin-bottom:.2rem}
+.hi-meta{font-size:.7rem;color:var(--ts);line-height:1.5}
+.hi-note{font-size:.73rem;color:var(--tm);margin-top:.3rem;font-style:italic}
+.del-btn{
+  background:none;border:none;color:var(--tm);cursor:pointer;
+  padding:.2rem;font-size:1rem;transition:color .15s;flex-shrink:0;
+}
+.del-btn:hover{color:var(--err)}
+
+/* ── Filter chips ────────────────────────────────── */
+.filt-row{
+  display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.75rem;
+  scrollbar-width:none;
+}
+.filt-row::-webkit-scrollbar{display:none}
+.fc{
+  background:var(--surf);border:1px solid var(--bdr2);border-radius:20px;
+  color:var(--tm);padding:.3rem .85rem;cursor:pointer;white-space:nowrap;
+  font-size:.7rem;transition:all .15s;flex-shrink:0;
+}
+.fc.on{border-color:var(--bdr-act);color:var(--green);background:rgba(74,103,65,.1)}
+
+/* ── Phase cards ─────────────────────────────────── */
+.phase-card{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:10px;
+  padding:1rem;margin-bottom:.75rem;opacity:.55;transition:opacity .2s;
+}
+.phase-card.cur{border-color:var(--bdr-act);opacity:1}
+.phase-card.done{opacity:.35}
+.phase-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
+.phase-title{font-size:.95rem;color:var(--tp)}
+.phase-badge{
+  font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;
+  padding:.2rem .6rem;border-radius:10px;border:1px solid var(--bdr-act);color:var(--green);
+}
+.phase-detail{font-size:.78rem;color:var(--ts)}
+.prog-wrap{background:var(--surf2);border-radius:4px;height:4px;margin-top:.75rem;overflow:hidden}
+.prog-fill{background:var(--green);height:100%;border-radius:4px;transition:width .4s}
+
+/* ── Status messages ─────────────────────────────── */
+.msg{text-align:center;font-size:.8rem;padding:.5rem;border-radius:7px;margin:.75rem 0}
+.msg.err{color:var(--err);background:rgba(223,106,106,.1);border:1px solid rgba(223,106,106,.3)}
+.msg.ok{color:var(--ok);background:rgba(106,223,106,.1);border:1px solid rgba(106,223,106,.3)}
+.msg.info{color:var(--ts);background:rgba(107,158,90,.1);border:1px solid rgba(107,158,90,.3)}
+
+/* ── Modal ───────────────────────────────────────── */
+#modal-wrap{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;
+  align-items:center;justify-content:center;z-index:600;padding:1.5rem;
+}
+#modal-wrap.on{display:flex}
+.modal{
+  background:var(--surf2);border:1px solid var(--bdr2);border-radius:14px;
+  padding:1.5rem;max-width:300px;width:100%;
+}
+.modal h3{font-size:1rem;color:var(--tp);margin-bottom:.5rem}
+.modal p{font-size:.83rem;color:var(--ts);margin-bottom:1.25rem}
+.modal-btns{display:flex;gap:.75rem}
+.modal-btns button{
+  flex:1;padding:.6rem;border-radius:9px;font-size:.85rem;cursor:pointer;border:none;
+}
+.mc{background:var(--surf);color:var(--ts);border:1px solid var(--bdr2)!important}
+.mx{background:var(--err);color:white}
+
+/* ── Toast ───────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:calc(var(--safe-b) + 5.5rem);left:50%;
+  transform:translateX(-50%) translateY(16px);
+  background:var(--surf2);border:1px solid var(--bdr-act);border-radius:9px;
+  color:var(--tp);font-size:.78rem;padding:.55rem 1.25rem;
+  opacity:0;transition:opacity .2s,transform .2s;z-index:700;
+  pointer-events:none;white-space:nowrap;
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Deltas ──────────────────────────────────────── */
+.dp{color:var(--err)}.dn{color:var(--ok)}.d0{color:var(--tm)}
+
+/* ── Scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px}
+
+/* ── Responsive ──────────────────────────────────── */
+@media(max-width:360px){
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .frow{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="scr-load" class="scr on">
+  <div class="spin"></div>
+  <div style="font-size:.72rem;color:var(--tm);text-transform:uppercase;letter-spacing:.1em">Loading</div>
+</div>
+
+<!-- PIN -->
+<div id="scr-pin" class="scr">
+  <div style="text-align:center">
+    <h1 style="font-size:1.4rem;letter-spacing:.04em">Elk Hunt Trainer</h1>
+    <p style="font-size:.75rem;color:var(--tm);margin-top:.35rem">Enter PIN to continue</p>
+  </div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+  </div>
+  <div id="pin-err" class="msg err" style="display:none">Incorrect PIN</div>
+  <div class="pin-pad">
+    <button class="pk" onclick="pinKey('1')">1</button>
+    <button class="pk" onclick="pinKey('2')">2</button>
+    <button class="pk" onclick="pinKey('3')">3</button>
+    <button class="pk" onclick="pinKey('4')">4</button>
+    <button class="pk" onclick="pinKey('5')">5</button>
+    <button class="pk" onclick="pinKey('6')">6</button>
+    <button class="pk" onclick="pinKey('7')">7</button>
+    <button class="pk" onclick="pinKey('8')">8</button>
+    <button class="pk" onclick="pinKey('9')">9</button>
+    <button class="pk sm" onclick="pinKey('back')">⌫</button>
+    <button class="pk" onclick="pinKey('0')">0</button>
+    <button class="pk sm" onclick="skipPin()">Skip</button>
+  </div>
+</div>
+
+<!-- Setup -->
+<div id="scr-setup" class="scr">
+  <div class="logo" style="margin-bottom:2rem">
+    <h1>Elk Hunt Trainer</h1>
+    <p>South Slope Uintas · October 2027</p>
+  </div>
+  <p class="setup-lede">Connect GitHub Storage</p>
+  <div class="fg">
+    <label class="fl">GitHub Personal Access Token</label>
+    <input type="password" id="gh-tok" class="fi" placeholder="ghp_xxxxxxxxxxxx"
+           autocomplete="off" autocorrect="off" spellcheck="false">
+    <p style="font-size:.67rem;color:var(--tm);margin-top:.4rem">
+      Requires <code style="color:var(--green)">repo</code> scope (Contents API).
+      Stored only in this device's localStorage — never committed.
+    </p>
+  </div>
+  <div class="frow">
+    <div class="fg">
+      <label class="fl">GitHub Username</label>
+      <input type="text" id="gh-own" class="fi" placeholder="your-username"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="fg">
+      <label class="fl">Repository Name</label>
+      <input type="text" id="gh-rep" class="fi" placeholder="elk-data"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+  </div>
+  <div id="setup-msg"></div>
+  <button class="btn" onclick="setupVerify()">Verify &amp; Connect</button>
+  <button class="btn-link" onclick="setupSkip()">Use local storage only (demo mode)</button>
+</div>
+
+<!-- App -->
+<div id="scr-app" class="scr">
+  <div id="sync"></div>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="si"><span class="sv" id="st-days">—</span><span class="sl">Days to Hunt</span></div>
+    <div class="si"><span class="sv" id="st-str">0</span><span class="sl">Streak</span></div>
+    <div class="si"><span class="sv" id="st-rnd">0</span><span class="sl">Rounds</span></div>
+    <div class="si"><span class="sv" id="st-grp">—</span><span class="sl">Best Group</span></div>
+  </div>
+
+  <!-- Tab panes -->
+  <div id="pane-week"     class="tab-pane on"></div>
+  <div id="pane-shooting" class="tab-pane"></div>
+  <div id="pane-weight"   class="tab-pane"></div>
+  <div id="pane-log"      class="tab-pane"></div>
+  <div id="pane-plan"     class="tab-pane"></div>
+
+  <!-- Tab nav -->
+  <nav class="tab-nav">
+    <button id="tb-week" class="tb on" onclick="tab('week',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>Week
+    </button>
+    <button id="tb-shooting" class="tb" onclick="tab('shooting',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>
+        <line x1="12" y1="3" x2="12" y2="1"/><line x1="12" y1="23" x2="12" y2="21"/>
+        <line x1="3" y1="12" x2="1" y2="12"/><line x1="23" y1="12" x2="21" y2="12"/>
+      </svg>Shoot
+    </button>
+    <button id="tb-weight" class="tb" onclick="tab('weight',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 21L7 11h10l4 10H3z"/><path d="M7 11V8a5 5 0 0110 0v3"/>
+      </svg>Weight
+    </button>
+    <button id="tb-log" class="tb" onclick="tab('log',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14,2 14,8 20,8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>Log
+    </button>
+    <button id="tb-plan" class="tb" onclick="tab('plan',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+      </svg>Plan
+    </button>
+  </nav>
+</div>
+
+<!-- Modal -->
+<div id="modal-wrap">
+  <div class="modal">
+    <h3 id="modal-title">Confirm Delete</h3>
+    <p id="modal-body">This entry will be permanently removed.</p>
+    <div class="modal-btns">
+      <button class="mc" onclick="modalClose()">Cancel</button>
+      <button class="mx" id="modal-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const HUNT = new Date('2027-10-03T00:00:00');
+const RIFLES = ['Ridgeline 300 Win Mag','Remington 783 30-06','Mossberg 100 ATR 30-06','7mm Rem Mag'];
+const DISTS  = ['50 yds','100 yds','200 yds','300 yds','400 yds'];
+const CONDS  = ['Calm','Light Wind','Moderate Wind','Heavy Wind','Rain','Cold'];
+const PHASES = [
+  {n:1,mo:'1–3',  vest:'15 lb',focus:'Build the base',        thresh:0},
+  {n:2,mo:'4–6',  vest:'20 lb',focus:'Add intensity + incline',thresh:60},
+  {n:3,mo:'7–9',  vest:'25 lb',focus:'Go heavy',              thresh:120},
+  {n:4,mo:'10–12',vest:'35 lb',focus:'Hunt ready',            thresh:180},
+];
+const RIFLE_COLORS = {
+  'Ridgeline 300 Win Mag': '#6B9E5A',
+  'Remington 783 30-06':   '#8B6914',
+  'Mossberg 100 ATR 30-06':'#9aad8a',
+  '7mm Rem Mag':           '#df6a6a',
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const S = {
+  data: {schemaVersion:1,workoutLog:{},sessionNotes:{},weightLog:{},shootLog:[]},
+  sha: null,
+  gh: {tok:null,own:null,rep:null},
+  tab: 'week',
+  wkOff: 0,
+  shtSub: 'log',
+  wgtSub: 'log',
+  shtFilt: 'all',
+  selCond: '',
+  pinBuf: '',
+  saveTimer: null,
+  offQ: [],
+};
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function dstr(d) {
+  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+}
+function p2(n) { return String(n).padStart(2,'0'); }
+function today() { return dstr(new Date()); }
+
+function fmtShort(d) {
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function fmtFull(ds) {
+  const d = new Date(ds+'T12:00:00');
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+
+function dayPlan(ds) {
+  const dow = new Date(ds+'T12:00:00').getDay();
+  if (dow===0) return {label:'Rest / Mobility',     type:'rest'};
+  if (dow===6) return {label:'Long Effort — 60–90 min trail ruck',type:'long'};
+  return       {label:'Weighted 5K + Legs',        type:'work'};
+}
+
+function weekMon(offset) {
+  const now = new Date();
+  const dow = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - ((dow+6)%7) + offset*7);
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+
+function totalDone() {
+  return Object.values(S.data.workoutLog).filter(Boolean).length;
+}
+
+function currentPhase() {
+  const n = totalDone();
+  let p = PHASES[0];
+  for (const ph of PHASES) { if (n >= ph.thresh) p = ph; }
+  return p;
+}
+
+function encContent(obj) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj,null,2))));
+}
+function decContent(b64) {
+  return JSON.parse(decodeURIComponent(escape(atob(b64.replace(/\s/g,'')))));
+}
+
+// ── GitHub API ────────────────────────────────────────────────────────────────
+async function ghReq(path, opts={}) {
+  const headers = {'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
+  if (S.gh.tok) headers['Authorization'] = `token ${S.gh.tok}`;
+  return fetch(`https://api.github.com${path}`, {...opts, headers:{...headers,...(opts.headers||{})}});
+}
+
+async function loadData() {
+  if (!S.gh.tok) return false;
+  try {
+    const r = await ghReq(`/repos/${S.gh.own}/${S.gh.rep}/contents/data.json`);
+    if (r.status===404) { await initDataFile(); return true; }
+    if (!r.ok) return false;
+    const j = await r.json();
+    S.sha = j.sha;
+    S.data = {...S.data, ...decContent(j.content)};
+    return true;
+  } catch(e) { return false; }
+}
+
+async function initDataFile() {
+  const empty = {schemaVersion:1,workoutLog:{},sessionNotes:{},weightLog:{},shootLog:[]};
+  const r = await ghReq(`/repos/${S.gh.own}/${S.gh.rep}/contents/data.json`, {
+    method:'PUT',
+    body: JSON.stringify({message:'Initialize elk trainer data',content:encContent(empty)})
+  });
+  if (r.ok) { const j = await r.json(); S.sha = j.content.sha; }
+}
+
+async function writeData() {
+  if (!S.gh.tok) {
+    localStorage.setItem('elk_local', JSON.stringify(S.data));
+    setSyncEl('saved','✓ local'); return;
+  }
+  if (!navigator.onLine) {
+    S.offQ.push(JSON.parse(JSON.stringify(S.data)));
+    localStorage.setItem('elk_offq', JSON.stringify(S.offQ));
+    setSyncEl('fail','● offline'); return;
+  }
+  setSyncEl('saving','↑ saving');
+  try {
+    // Always fetch fresh SHA before write to avoid 409
+    const fresh = await ghReq(`/repos/${S.gh.own}/${S.gh.rep}/contents/data.json`);
+    if (fresh.ok) { const fj = await fresh.json(); S.sha = fj.sha; }
+    const wr = await ghReq(`/repos/${S.gh.own}/${S.gh.rep}/contents/data.json`, {
+      method:'PUT',
+      body: JSON.stringify({message:'Update training data',content:encContent(S.data),sha:S.sha})
+    });
+    if (wr.ok) {
+      const wj = await wr.json(); S.sha = wj.content.sha;
+      setSyncEl('saved','✓ saved');
+    } else {
+      setSyncEl('fail','✗ error'); toast('Save failed — check connection');
+    }
+  } catch(e) { setSyncEl('fail','✗ offline'); }
+}
+
+function queueSave() {
+  clearTimeout(S.saveTimer);
+  S.saveTimer = setTimeout(writeData, 1500);
+}
+
+async function flushOffQ() {
+  if (!S.offQ.length || !S.gh.tok) return;
+  S.data = S.offQ[S.offQ.length-1];
+  S.offQ = []; localStorage.removeItem('elk_offq');
+  await writeData();
+  renderTab();
+  toast('Offline changes synced');
+}
+
+function setSyncEl(cls, txt) {
+  const el = document.getElementById('sync');
+  el.textContent = txt;
+  el.className = cls;
+  if (cls==='saved') setTimeout(()=>{el.textContent='';el.className='';},2500);
+}
+
+// ── Config persistence ────────────────────────────────────────────────────────
+function cfgLoad() {
+  S.gh.tok = localStorage.getItem('elk_gh_tok') || null;
+  S.gh.own = localStorage.getItem('elk_gh_own') || null;
+  S.gh.rep = localStorage.getItem('elk_gh_rep') || null;
+  try { S.offQ = JSON.parse(localStorage.getItem('elk_offq')||'[]'); } catch(e){}
+}
+function cfgSave() {
+  localStorage.setItem('elk_gh_tok', S.gh.tok||'');
+  localStorage.setItem('elk_gh_own', S.gh.own||'');
+  localStorage.setItem('elk_gh_rep', S.gh.rep||'');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  window.addEventListener('online', flushOffQ);
+  cfgLoad();
+
+  const pin = localStorage.getItem('elk_pin');
+  if (pin) { show('scr-pin'); return; }
+
+  if (S.gh.tok && S.gh.own && S.gh.rep) {
+    show('scr-load');
+    const ok = await loadData();
+    if (!ok) {
+      const local = localStorage.getItem('elk_local');
+      if (local) { try{ S.data={...S.data,...JSON.parse(local)}; }catch(e){} }
+    }
+    launch();
+  } else {
+    show('scr-setup');
+  }
+}
+
+function launch() {
+  show('scr-app');
+  updateStats();
+  renderTab();
+}
+
+function show(id) {
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+
+// ── PIN ───────────────────────────────────────────────────────────────────────
+function pinKey(v) {
+  const stored = localStorage.getItem('elk_pin');
+  if (v==='back') { S.pinBuf = S.pinBuf.slice(0,-1); }
+  else { S.pinBuf += v; }
+  for (let i=0;i<4;i++) document.getElementById(`pd${i}`).classList.toggle('on', i<S.pinBuf.length);
+  if (S.pinBuf.length===4) {
+    setTimeout(async ()=>{
+      if (S.pinBuf===stored) {
+        document.getElementById('pin-err').style.display='none';
+        if (S.gh.tok && S.gh.own && S.gh.rep) {
+          show('scr-load');
+          await loadData();
+          launch();
+        } else {
+          show('scr-setup');
+        }
+      } else {
+        document.getElementById('pin-err').style.display='block';
+        S.pinBuf='';
+        for(let i=0;i<4;i++) document.getElementById(`pd${i}`).classList.remove('on');
+      }
+    },150);
+  }
+}
+function skipPin() {
+  if (S.gh.tok && S.gh.own && S.gh.rep) { show('scr-load'); loadData().then(launch); }
+  else show('scr-setup');
+}
+
+// ── Setup ─────────────────────────────────────────────────────────────────────
+async function setupVerify() {
+  const tok = document.getElementById('gh-tok').value.trim();
+  const own = document.getElementById('gh-own').value.trim();
+  const rep = document.getElementById('gh-rep').value.trim();
+  if (!tok||!own||!rep) { setMsg('err','All three fields are required.'); return; }
+  setMsg('info','Verifying…');
+  S.gh = {tok,own,rep};
+  try {
+    const r = await ghReq(`/repos/${own}/${rep}`);
+    if (!r.ok) {
+      setMsg('err', r.status===404
+        ? 'Repo not found — check username and repo name.'
+        : 'Access denied. Ensure the token has repo scope.');
+      return;
+    }
+    cfgSave();
+    const ok = await loadData();
+    if (!ok) { setMsg('err','Could not read or create data.json in that repo.'); return; }
+    launch();
+  } catch(e) { setMsg('err','Network error — check your connection.'); }
+}
+
+function setupSkip() {
+  S.gh = {tok:null,own:null,rep:null};
+  try { const l=localStorage.getItem('elk_local'); if(l) S.data={...S.data,...JSON.parse(l)}; }catch(e){}
+  launch();
+}
+
+function setMsg(cls, txt) {
+  document.getElementById('setup-msg').innerHTML = `<div class="msg ${cls}">${txt}</div>`;
+}
+
+// ── Tab routing ───────────────────────────────────────────────────────────────
+function tab(name, btn) {
+  S.tab = name;
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById(`pane-${name}`).classList.add('on');
+  btn.classList.add('on');
+  renderTab();
+}
+
+function renderTab() {
+  switch(S.tab){
+    case 'week':     renderWeek();     break;
+    case 'shooting': renderShoot();    break;
+    case 'weight':   renderWeight();   break;
+    case 'log':      renderLog();      break;
+    case 'plan':     renderPlan();     break;
+  }
+}
+
+// ── Stats bar ─────────────────────────────────────────────────────────────────
+function updateStats() {
+  const now = new Date();
+  const daysLeft = Math.ceil((HUNT - now)/86400000);
+  document.getElementById('st-days').textContent = daysLeft>0 ? daysLeft : 'HERE!';
+
+  // Streak: count back from yesterday through consecutive non-rest completed days
+  let streak=0, chk=new Date(now);
+  chk.setDate(chk.getDate()-1);
+  for(let i=0;i<400;i++){
+    const ds=dstr(chk);
+    const {type}=dayPlan(ds);
+    if(type==='rest'){chk.setDate(chk.getDate()-1);continue;}
+    if(S.data.workoutLog[ds]){streak++;chk.setDate(chk.getDate()-1);}
+    else break;
+  }
+  document.getElementById('st-str').textContent = streak;
+
+  const rounds = S.data.shootLog.reduce((s,e)=>s+(e.rounds||0),0);
+  document.getElementById('st-rnd').textContent = rounds;
+
+  const groups = S.data.shootLog.map(e=>e.groupSize).filter(v=>v>0);
+  document.getElementById('st-grp').textContent = groups.length ? Math.min(...groups).toFixed(1)+'"' : '—';
+}
+
+// ── Week Tab ──────────────────────────────────────────────────────────────────
+function renderWeek() {
+  const el = document.getElementById('pane-week');
+  const mon = weekMon(S.wkOff);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const tdy = today();
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  let h = `<div class="wk-hdr">
+    <button class="btn-sm" onclick="S.wkOff--;renderWeek()">‹ Prev</button>
+    <span class="wk-title">${fmtShort(mon)} – ${fmtShort(sun)}</span>
+    <button class="btn-sm" onclick="S.wkOff++;renderWeek()">Next ›</button>
+  </div>`;
+
+  for(let i=0;i<7;i++){
+    const d = new Date(mon); d.setDate(mon.getDate()+i);
+    const ds = dstr(d);
+    const {label,type} = dayPlan(ds);
+    const done = !!S.data.workoutLog[ds];
+    const hasW = !!S.data.weightLog[ds];
+    const hasS = S.data.shootLog.some(s=>s.date===ds);
+    const note = (S.data.sessionNotes[ds]||[]).map(n=>n.text).join('');
+    const isToday = ds===tdy;
+    const ph = currentPhase();
+
+    h += `<div class="day-row ${done?'done':''} ${type==='rest'?'rest':''}"
+               style="${isToday?'border-color:var(--gold);':''}" id="dr-${ds}">
+      <div class="day-main" onclick="${type!=='rest'?`toggleWkt('${ds}')`:''}"
+           style="${type==='rest'?'cursor:default;':''}">
+        <div class="day-check">
+          ${done?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>':''}
+        </div>
+        <div class="day-info">
+          <div class="day-name">${DAYS[d.getDay()]}, ${fmtShort(d)}
+            ${isToday?'<span style="font-size:.58rem;color:var(--gold);margin-left:.4rem;text-transform:uppercase;letter-spacing:.08em">Today</span>':''}
+          </div>
+          <div class="day-wkt">${label}${type!=='rest'?' · '+ph.vest+' vest':''}</div>
+        </div>
+        <div class="day-inds">
+          ${hasW?'<span class="ind w">wt</span>':''}
+          ${hasS?'<span class="ind s">🎯</span>':''}
+        </div>
+      </div>
+      ${type!=='rest'?`
+        <button class="day-exp" onclick="toggleNotes('${ds}')">Notes ${note?'·':'+'}
+        </button>
+        <div class="day-notes-panel" id="np-${ds}">
+          <textarea class="ni" id="ni-${ds}" rows="2" placeholder="How did it go?">${note}</textarea>
+          <button class="note-save" onclick="saveNote('${ds}')">Save note</button>
+        </div>
+      `:''}
+    </div>`;
+  }
+  el.innerHTML = h;
+}
+
+function toggleWkt(ds) {
+  if(S.data.workoutLog[ds]) delete S.data.workoutLog[ds];
+  else S.data.workoutLog[ds] = true;
+  updateStats();
+  renderWeek();
+  queueSave();
+}
+
+function toggleNotes(ds) {
+  document.getElementById(`np-${ds}`).classList.toggle('on');
+}
+
+function saveNote(ds) {
+  const val = document.getElementById(`ni-${ds}`).value.trim();
+  if(val) S.data.sessionNotes[ds] = [{text:val}];
+  else delete S.data.sessionNotes[ds];
+  toast('Note saved');
+  renderWeek();
+  queueSave();
+}
+
+// ── Shooting Tab ──────────────────────────────────────────────────────────────
+function renderShoot() {
+  const el = document.getElementById('pane-shooting');
+  const log = S.data.shootLog;
+  const total = log.length;
+  const rounds = log.reduce((s,e)=>s+(e.rounds||0),0);
+  const avg = total ? (log.reduce((s,e)=>s+(e.groupSize||0),0)/total).toFixed(2) : '—';
+
+  let h = `<div class="srow">
+    <div class="sbox"><span class="sbv">${total}</span><span class="sbl">Sessions</span></div>
+    <div class="sbox"><span class="sbv">${rounds}</span><span class="sbl">Rounds</span></div>
+    <div class="sbox"><span class="sbv">${avg}"</span><span class="sbl">Avg Group</span></div>
+  </div>
+  <div class="subnav">
+    <button class="snb ${S.shtSub==='log'?'on':''}" onclick="S.shtSub='log';renderShoot()">Log Session</button>
+    <button class="snb ${S.shtSub==='hist'?'on':''}" onclick="S.shtSub='hist';renderShoot()">History</button>
+  </div>`;
+
+  if (S.shtSub==='log') {
+    h += `<div class="card">
+      <div class="sec">New Range Session</div>
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Date</label>
+          <input type="date" id="s-dt" class="fi" value="${today()}">
+        </div>
+        <div class="fg">
+          <label class="fl">Distance</label>
+          <select id="s-ds" class="fs">${DISTS.map(d=>`<option>${d}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Rifle</label>
+        <select id="s-ri" class="fs">${RIFLES.map(r=>`<option>${r}</option>`).join('')}</select>
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Rounds Fired</label>
+          <input type="number" id="s-rn" class="fi" placeholder="20" min="1">
+        </div>
+        <div class="fg">
+          <label class="fl">Best Group (in)</label>
+          <input type="number" id="s-gr" class="fi" placeholder="1.5" step="0.1" min="0.1">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Conditions</label>
+        <div class="chips" id="cond-chips">
+          ${CONDS.map(c=>`<button class="chip ${S.selCond===c?'on':''}" onclick="selCond('${c}',this)">${c}</button>`).join('')}
+        </div>
+      </div>
+      <div class="fg">
+        <div class="tgl-row">
+          <label class="fl" style="margin:0">Cold Bore Shot</label>
+          <label class="tgl"><input type="checkbox" id="s-cb"><span class="tgl-sl"></span></label>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Notes</label>
+        <textarea id="s-nt" class="ft" placeholder="Observations, adjustments, conditions…"></textarea>
+      </div>
+      <button class="btn" onclick="logShoot()">Log Session</button>
+    </div>`;
+  } else {
+    if (log.length > 1) h += shootChart(log);
+
+    const filt = S.shtFilt==='all' ? log : log.filter(s=>s.rifle===S.shtFilt);
+    h += `<div class="filt-row">
+      <button class="fc ${S.shtFilt==='all'?'on':''}" onclick="S.shtFilt='all';renderShoot()">All</button>
+      ${RIFLES.map(r=>`<button class="fc ${S.shtFilt===r?'on':''}"
+        onclick="S.shtFilt='${r}';renderShoot()">${r.split(' ').slice(0,2).join(' ')}</button>`).join('')}
+    </div>`;
+
+    if (!filt.length) {
+      h += `<p style="color:var(--tm);text-align:center;padding:2.5rem .5rem;font-size:.85rem">No sessions logged yet.</p>`;
+    } else {
+      [...filt].sort((a,b)=>b.date.localeCompare(a.date)).forEach(s=>{
+        h += `<div class="hi">
+          <div class="hi-main">
+            <div class="hi-title" style="color:${RIFLE_COLORS[s.rifle]||'var(--green)'}">
+              ${s.rifle}
+            </div>
+            <div class="hi-meta">
+              ${fmtFull(s.date)} · ${s.distance} · ${s.rounds} rds
+              · <strong>${s.groupSize}"</strong> group
+              ${s.condition?' · '+s.condition:''}${s.coldBore?' · Cold bore':''}
+            </div>
+            ${s.notes?`<div class="hi-note">${s.notes}</div>`:''}
+          </div>
+          <button class="del-btn" onclick="confirmDel('shoot','${s.id}')">✕</button>
+        </div>`;
+      });
+    }
+  }
+  el.innerHTML = h;
+}
+
+function shootChart(sessions) {
+  const pts = [...sessions].sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
+  const W = Math.min(window.innerWidth - 48, 560);
+  const H = 150, pd = {t:14,r:14,b:30,l:36};
+  const iW=W-pd.l-pd.r, iH=H-pd.t-pd.b;
+  const maxG = Math.max(...pts.map(s=>s.groupSize||0))*1.15||5;
+  const px=i=>pd.l+i*(iW/Math.max(pts.length-1,1));
+  const py=v=>pd.t+iH-((v/maxG)*iH);
+
+  let grid='', dots='', path='';
+  [0,.25,.5,.75,1].forEach(f=>{
+    const v=maxG*f, y=py(v);
+    grid+=`<line x1="${pd.l}" y1="${y}" x2="${pd.l+iW}" y2="${y}" stroke="var(--bdr)" stroke-width="1"/>
+           <text x="${pd.l-4}" y="${y+3.5}" text-anchor="end" fill="var(--tm)" font-size="9">${v.toFixed(1)}</text>`;
+  });
+  pts.forEach((s,i)=>{
+    const x=px(i),y=py(s.groupSize||0),c=RIFLE_COLORS[s.rifle]||'var(--green)';
+    path+=(i?` L${x},${y}`:`M${x},${y}`);
+    dots+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${c}" stroke="var(--surf)" stroke-width="2"/>`;
+  });
+  const xLbls=[0,Math.floor(pts.length/2),pts.length-1].filter((v,i,a)=>a.indexOf(v)===i&&v<pts.length);
+  const xlStr = xLbls.map(i=>{
+    const d=new Date(pts[i].date+'T12:00:00');
+    return `<text x="${px(i)}" y="${H-4}" text-anchor="middle" fill="var(--tm)" font-size="9">
+      ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</text>`;
+  }).join('');
+
+  return `<div class="chart-wrap">
+    <div class="sec">Group Size Trend — last ${pts.length} sessions</div>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      ${grid}
+      <path d="${path}" fill="none" stroke="var(--bdr-act)" stroke-width="2"/>
+      ${dots}${xlStr}
+    </svg>
+  </div>`;
+}
+
+function selCond(v, btn) {
+  S.selCond = S.selCond===v ? '' : v;
+  renderShoot();
+}
+
+function logShoot() {
+  const dt  = document.getElementById('s-dt').value;
+  const ri  = document.getElementById('s-ri').value;
+  const ds  = document.getElementById('s-ds').value;
+  const rn  = parseInt(document.getElementById('s-rn').value);
+  const gr  = parseFloat(document.getElementById('s-gr').value);
+  const nt  = document.getElementById('s-nt').value.trim();
+  const cb  = document.getElementById('s-cb').checked;
+  if (!dt||!rn||isNaN(gr)||gr<=0) { toast('Fill in date, rounds, and group size'); return; }
+  S.data.shootLog.push({id:Date.now(),date:dt,rifle:ri,distance:ds,rounds:rn,
+    groupSize:gr,condition:S.selCond,coldBore:cb,notes:nt});
+  S.selCond='';
+  S.shtSub='hist';
+  updateStats(); renderShoot(); queueSave();
+  toast('Session logged');
+}
+
+// ── Weight Tab ────────────────────────────────────────────────────────────────
+function renderWeight() {
+  const el = document.getElementById('pane-weight');
+  const ents = Object.entries(S.data.weightLog).sort((a,b)=>a[0].localeCompare(b[0]));
+  const cur = ents.length ? ents[ents.length-1][1] : null;
+  const start = ents.length ? ents[0][1] : null;
+  const chg = (cur&&start) ? (cur-start).toFixed(1) : null;
+  const cc = chg>0?'dp':chg<0?'dn':'d0';
+
+  let h = `<div class="srow">
+    <div class="sbox"><span class="sbv">${cur?cur+' lb':'—'}</span><span class="sbl">Current</span></div>
+    <div class="sbox"><span class="sbv">${start?start+' lb':'—'}</span><span class="sbl">Starting</span></div>
+    <div class="sbox">
+      <span class="sbv ${cc}">${chg!==null?(chg>0?'+':'')+chg+' lb':'—'}</span>
+      <span class="sbl">Total Change</span>
+    </div>
+  </div>
+  <div class="subnav">
+    <button class="snb ${S.wgtSub==='log'?'on':''}" onclick="S.wgtSub='log';renderWeight()">Log Weight</button>
+    <button class="snb ${S.wgtSub==='hist'?'on':''}" onclick="S.wgtSub='hist';renderWeight()">History</button>
+  </div>`;
+
+  if (S.wgtSub==='log') {
+    h += `<div class="card">
+      <div class="sec">Log Weight</div>
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Date</label>
+          <input type="date" id="w-dt" class="fi" value="${today()}">
+        </div>
+        <div class="fg">
+          <label class="fl">Weight (lbs)</label>
+          <input type="number" id="w-wt" class="fi" placeholder="215" step="0.1" min="50" max="500">
+        </div>
+      </div>
+      <button class="btn" onclick="logWt()">Log Weight</button>
+    </div>`;
+  } else {
+    if (ents.length>1) h += weightChart(ents);
+    if (!ents.length) {
+      h += `<p style="color:var(--tm);text-align:center;padding:2.5rem .5rem;font-size:.85rem">No weight entries yet.</p>`;
+    } else {
+      [...ents].reverse().forEach(([ds,w],i,arr)=>{
+        const prev = arr[i+1];
+        const delta = prev ? (w-prev[1]).toFixed(1) : null;
+        const dc = delta>0?'dp':delta<0?'dn':'d0';
+        h += `<div class="hi">
+          <div class="hi-main">
+            <div class="hi-title">${w} lbs</div>
+            <div class="hi-meta">${fmtFull(ds)}
+              ${delta!==null?`<span class="${dc}" style="margin-left:.5rem">${delta>0?'+':''}${delta} lb</span>`:''}
+            </div>
+          </div>
+          <button class="del-btn" onclick="confirmDel('weight','${ds}')">✕</button>
+        </div>`;
+      });
+    }
+  }
+  el.innerHTML = h;
+}
+
+function weightChart(ents) {
+  const last = ents.slice(-60);
+  const W = Math.min(window.innerWidth-48,560);
+  const H=150, pd={t:14,r:14,b:30,l:44};
+  const iW=W-pd.l-pd.r, iH=H-pd.t-pd.b;
+  const ws=last.map(e=>e[1]);
+  const hi=Math.max(...ws)+3, lo=Math.min(...ws)-3;
+  const px=i=>pd.l+i*(iW/Math.max(last.length-1,1));
+  const py=v=>pd.t+iH-(((v-lo)/(hi-lo))*iH);
+
+  let grid='';
+  [0,.33,.66,1].forEach(f=>{
+    const v=lo+(hi-lo)*f, y=py(v);
+    grid+=`<line x1="${pd.l}" y1="${y}" x2="${pd.l+iW}" y2="${y}" stroke="var(--bdr)" stroke-width="1"/>
+           <text x="${pd.l-4}" y="${y+3.5}" text-anchor="end" fill="var(--tm)" font-size="9">${Math.round(v)}</text>`;
+  });
+  const area = `M${px(0)},${py(last[0][1])} `+last.map((e,i)=>`L${px(i)},${py(e[1])}`).join(' ')
+    +` L${px(last.length-1)},${pd.t+iH} L${px(0)},${pd.t+iH} Z`;
+  const line = last.map((e,i)=>(i?` L`:`M`)+`${px(i)},${py(e[1])}`).join('');
+  const xLbls = [0,Math.floor(last.length/2),last.length-1].filter((v,i,a)=>a.indexOf(v)===i&&v<last.length).map(i=>{
+    const d=new Date(last[i][0]+'T12:00:00');
+    return `<text x="${px(i)}" y="${H-4}" text-anchor="middle" fill="var(--tm)" font-size="9">
+      ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</text>`;
+  }).join('');
+
+  return `<div class="chart-wrap">
+    <div class="sec">Weight Trend — last ${last.length} entries</div>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <defs>
+        <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--gold)" stop-opacity=".35"/>
+          <stop offset="100%" stop-color="var(--gold)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      ${grid}
+      <path d="${area}" fill="url(#wg)"/>
+      <path d="${line}" fill="none" stroke="var(--gold)" stroke-width="2.5"/>
+      ${xLbls}
+    </svg>
+  </div>`;
+}
+
+function logWt() {
+  const dt = document.getElementById('w-dt').value;
+  const wt = parseFloat(document.getElementById('w-wt').value);
+  if (!dt||isNaN(wt)||wt<50||wt>500) { toast('Enter a valid weight (50–500 lbs)'); return; }
+  S.data.weightLog[dt] = wt;
+  S.wgtSub='hist';
+  renderWeight(); queueSave();
+  toast('Weight logged');
+}
+
+// ── Fitness Log Tab ───────────────────────────────────────────────────────────
+function renderLog() {
+  const el = document.getElementById('pane-log');
+  const done = Object.entries(S.data.workoutLog)
+    .filter(([,v])=>v)
+    .sort((a,b)=>b[0].localeCompare(a[0]));
+
+  let h = `<div class="sec">${done.length} workouts logged</div>`;
+
+  if (!done.length) {
+    h += `<p style="color:var(--tm);text-align:center;padding:2.5rem .5rem;font-size:.85rem">
+      No workouts yet.<br>Mark days complete in the Week tab.
+    </p>`;
+  } else {
+    done.forEach(([ds])=>{
+      const {label} = dayPlan(ds);
+      const wt = S.data.weightLog[ds];
+      const note = (S.data.sessionNotes[ds]||[]).map(n=>n.text).join('');
+      // Phase at that session
+      const nBefore = Object.entries(S.data.workoutLog)
+        .filter(([d,v])=>v && d<=ds).length;
+      const ph = [...PHASES].reverse().find(p=>nBefore>p.thresh) || PHASES[0];
+      h += `<div class="hi">
+        <div class="hi-main">
+          <div class="hi-title">${label}</div>
+          <div class="hi-meta">
+            ${fmtFull(ds)} · Phase ${ph.n} · ${ph.vest} vest
+            ${wt?' · '+wt+' lbs':''}
+          </div>
+          ${note?`<div class="hi-note">${note}</div>`:''}
+        </div>
+      </div>`;
+    });
+  }
+  el.innerHTML = h;
+}
+
+// ── Plan Tab ──────────────────────────────────────────────────────────────────
+function renderPlan() {
+  const el = document.getElementById('pane-plan');
+  const n = totalDone();
+  const cp = currentPhase();
+
+  let h = `<div class="sec">12-Month Training Program</div>`;
+
+  PHASES.forEach(ph=>{
+    const isCur = ph.n===cp.n;
+    const isDone = n >= ph.thresh+60 && ph.n!==4 ? true : (ph.n===4 && false);
+    const pct = isCur ? Math.min(((n-ph.thresh)/60)*100,100) : n>=ph.thresh+60 ? 100 : 0;
+    h += `<div class="phase-card ${isCur?'cur':''} ${!isCur&&n>=ph.thresh+60?'done':''}">
+      <div class="phase-hdr">
+        <div class="phase-title">Phase ${ph.n} — ${ph.vest}</div>
+        ${isCur?'<div class="phase-badge">Current</div>':
+          n>=ph.thresh+60?'<div class="phase-badge" style="border-color:var(--tm);color:var(--tm)">Done</div>':''}
+      </div>
+      <div class="phase-detail">Months ${ph.mo} · ${ph.focus}</div>
+      ${isCur?`
+        <div class="prog-wrap"><div class="prog-fill" style="width:${pct.toFixed(1)}%"></div></div>
+        <div style="font-size:.67rem;color:var(--tm);margin-top:.4rem">
+          ${n-ph.thresh} / 60 sessions complete
+        </div>
+      `:''}
+    </div>`;
+  });
+
+  h += `<div class="sec sec-gap">Weekly Schedule</div>
+  <div class="card">
+    ${[['Mon – Fri','Weighted 5K + Legs'],['Saturday','Long Effort — 60–90 min trail ruck'],['Sunday','Rest / Mobility']]
+      .map(([d,w])=>`<div style="display:flex;justify-content:space-between;align-items:baseline;
+        padding:.55rem 0;border-bottom:1px solid var(--bdr);font-size:.85rem">
+        <span style="color:var(--ts);flex-shrink:0;margin-right:1rem">${d}</span>
+        <span style="color:var(--tp);text-align:right">${w}</span>
+      </div>`).join('')}
+  </div>
+
+  <div class="sec sec-gap">Hunt Countdown</div>
+  <div class="card" style="text-align:center;padding:1.5rem 1rem">
+    <div style="font-size:2.8rem;color:var(--tp);line-height:1">
+      ${Math.max(0,Math.ceil((HUNT-new Date())/86400000))}
+    </div>
+    <div style="font-size:.65rem;color:var(--tm);text-transform:uppercase;letter-spacing:.1em;margin-top:.35rem">
+      Days to October 3, 2027
+    </div>
+    <div style="font-size:.8rem;color:var(--ts);margin-top:.6rem">
+      South Slope Uintas · Utah General Season
+    </div>
+  </div>`;
+
+  el.innerHTML = h;
+}
+
+// ── Delete / modal ────────────────────────────────────────────────────────────
+let _delPending = null;
+
+function confirmDel(type, id) {
+  _delPending = {type, id};
+  document.getElementById('modal-ok').onclick = execDel;
+  document.getElementById('modal-wrap').classList.add('on');
+}
+function modalClose() {
+  _delPending = null;
+  document.getElementById('modal-wrap').classList.remove('on');
+}
+function execDel() {
+  if (!_delPending) return;
+  const {type,id} = _delPending;
+  if (type==='shoot') {
+    S.data.shootLog = S.data.shootLog.filter(s=>String(s.id)!==String(id));
+    updateStats(); renderShoot();
+  } else if (type==='weight') {
+    delete S.data.weightLog[id];
+    renderWeight();
+  }
+  queueSave(); modalClose(); toast('Deleted');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(()=>el.classList.remove('on'), 2200);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
