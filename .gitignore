@@ -1,0 +1,6 @@
+# Data file must never live in this public repo — it belongs in elk-trainer-data (private)
+data.json
+
+# Local development
+.DS_Store
+Thumbs.db
